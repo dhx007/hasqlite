@@ -1,0 +1,45 @@
+{
+  "ha": {
+    "node_id": "node-1",
+    "address": "192.168.1.10:8080",
+    "peer_address": "192.168.1.11:8080",
+    "data_dir": "/var/lib/hasqlite",
+    "sync_interval": "30s",
+    "heartbeat_interval": "10s",
+    "failover_timeout": "30s",
+    "enable_event_store": true,
+    "retry_config": {
+      "max_retries": 3,
+      "retry_interval": "5s",
+      "backoff_factor": 2.0
+    },
+    "timeout_config": {
+      "sync_timeout": "60s",
+      "event_timeout": "30s",
+      "network_timeout": "10s"
+    }
+  },
+  "security": {
+    "enable_tls": true,
+    "cert_file": "/etc/ssl/certs/hasqlite.crt",
+    "key_file": "/etc/ssl/private/hasqlite.key",
+    "ca_file": "/etc/ssl/certs/ca.crt",
+    "api_key": "your-secure-api-key",
+    "encrypt_data": true,
+    "encryption_key": "your-encryption-key"
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "output_file": "/var/log/hasqlite/hasqlite.log",
+    "max_size": 100,
+    "max_backups": 10,
+    "max_age": 30
+  },
+  "metrics": {
+    "enabled": true,
+    "port": 9090,
+    "path": "/metrics",
+    "interval": "30s"
+  }
+}

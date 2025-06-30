@@ -284,14 +284,18 @@ func (nm *NodeManager) checkPeerHealth() {
 	}
 }
 
-// IsPrimary 检查当前节点是否为主节点
+// IsPrimary 检查是否为主节点
 func (nm *NodeManager) IsPrimary() bool {
-	return nm.GetCurrentRole() == Primary
+	nm.mu.RLock()
+	defer nm.mu.RUnlock()
+	return nm.currentNode.Role == Primary
 }
 
-// IsSecondary 检查当前节点是否为备节点
+// IsSecondary 检查是否为备节点
 func (nm *NodeManager) IsSecondary() bool {
-	return nm.GetCurrentRole() == Secondary
+	nm.mu.RLock()
+	defer nm.mu.RUnlock()
+	return nm.currentNode.Role == Secondary
 }
 
 // GetNodeInfo 获取当前节点信息
@@ -301,4 +305,18 @@ func (nm *NodeManager) GetNodeInfo() *NodeInfo {
 	// 返回副本避免并发修改
 	node := *nm.currentNode
 	return &node
+}
+
+// SetHeartbeatInterval 设置心跳间隔
+func (nm *NodeManager) SetHeartbeatInterval(interval time.Duration) {
+	nm.mu.Lock()
+	defer nm.mu.Unlock()
+	nm.heartbeatInterval = interval
+}
+
+// SetFailoverTimeout 设置故障转移超时
+func (nm *NodeManager) SetFailoverTimeout(timeout time.Duration) {
+	nm.mu.Lock()
+	defer nm.mu.Unlock()
+	nm.failoverTimeout = timeout
 }

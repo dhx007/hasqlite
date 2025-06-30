@@ -31,23 +31,23 @@ func NewAPIServer(haManager *HAManager, port int) *APIServer {
 // Start 启动API服务器
 func (api *APIServer) Start() error {
 	mux := http.NewServeMux()
-	
+
 	// 注册路由
 	api.registerRoutes(mux)
-	
+
 	api.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", api.port),
 		Handler: mux,
 	}
-	
+
 	log.Infof("Starting HA SQLite API server on port %d", api.port)
-	
+
 	go func() {
 		if err := api.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Errorf("API server error: %v", err)
 		}
 	}()
-	
+
 	return nil
 }
 
@@ -56,7 +56,7 @@ func (api *APIServer) Stop() error {
 	if api.server == nil {
 		return nil
 	}
-	
+
 	log.Info("Stopping HA SQLite API server")
 	return api.server.Close()
 }
@@ -65,23 +65,23 @@ func (api *APIServer) Stop() error {
 func (api *APIServer) registerRoutes(mux *http.ServeMux) {
 	// 健康检查
 	mux.HandleFunc("/health", api.handleHealth)
-	
+
 	// 节点信息
 	mux.HandleFunc("/api/node/info", api.handleNodeInfo)
 	mux.HandleFunc("/api/node/role", api.handleNodeRole)
 	mux.HandleFunc("/api/node/promote", api.handlePromoteNode)
 	mux.HandleFunc("/api/node/demote", api.handleDemoteNode)
-	
+
 	// 心跳
 	mux.HandleFunc("/api/heartbeat", api.handleHeartbeat)
-	
+
 	// 数据库文件传输
 	mux.HandleFunc("/api/database/", api.handleDatabaseFile)
-	
+
 	// 同步管理
 	mux.HandleFunc("/api/sync/now", api.handleSyncNow)
 	mux.HandleFunc("/api/sync/history", api.handleSyncHistory)
-	
+
 	// 事件管理
 	mux.HandleFunc("/api/events/count", api.handleEventCount)
 	mux.HandleFunc("/api/events/unapplied", api.handleUnappliedEvents)
@@ -90,12 +90,12 @@ func (api *APIServer) registerRoutes(mux *http.ServeMux) {
 // handleHealth 健康检查处理器
 func (api *APIServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
-		"status":    "healthy",
-		"timestamp": time.Now(),
-		"node_role": api.haManager.GetNodeRole(),
+		"status":      "healthy",
+		"timestamp":   time.Now(),
+		"node_role":   api.haManager.GetNodeRole(),
 		"node_status": api.haManager.GetNodeStatus(),
 	}
-	
+
 	api.writeJSONResponse(w, http.StatusOK, response)
 }
 
@@ -105,15 +105,15 @@ func (api *APIServer) handleNodeInfo(w http.ResponseWriter, r *http.Request) {
 		api.writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	
+
 	nodeInfo := api.haManager.nodeManager.GetNodeInfo()
 	peerInfo := api.haManager.nodeManager.GetPeerNode()
-	
+
 	response := map[string]interface{}{
 		"current_node": nodeInfo,
 		"peer_node":    peerInfo,
 	}
-	
+
 	api.writeJSONResponse(w, http.StatusOK, response)
 }
 
@@ -123,12 +123,12 @@ func (api *APIServer) handleNodeRole(w http.ResponseWriter, r *http.Request) {
 		api.writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"role":   api.haManager.GetNodeRole(),
 		"status": api.haManager.GetNodeStatus(),
 	}
-	
+
 	api.writeJSONResponse(w, http.StatusOK, response)
 }
 
@@ -138,17 +138,17 @@ func (api *APIServer) handlePromoteNode(w http.ResponseWriter, r *http.Request) 
 		api.writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	
+
 	if err := api.haManager.PromoteToPrimary(); err != nil {
 		api.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"message": "Node promoted to primary",
 		"role":    api.haManager.GetNodeRole(),
 	}
-	
+
 	api.writeJSONResponse(w, http.StatusOK, response)
 }
 
@@ -158,17 +158,17 @@ func (api *APIServer) handleDemoteNode(w http.ResponseWriter, r *http.Request) {
 		api.writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	
+
 	if err := api.haManager.DemoteToSecondary(); err != nil {
 		api.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"message": "Node demoted to secondary",
 		"role":    api.haManager.GetNodeRole(),
 	}
-	
+
 	api.writeJSONResponse(w, http.StatusOK, response)
 }
 
@@ -178,15 +178,15 @@ func (api *APIServer) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 		api.writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	
+
 	// 更新对等节点心跳
 	api.haManager.nodeManager.UpdatePeerHeartbeat()
-	
+
 	response := map[string]interface{}{
 		"message":   "Heartbeat received",
 		"timestamp": time.Now(),
 	}
-	
+
 	api.writeJSONResponse(w, http.StatusOK, response)
 }
 
@@ -198,7 +198,7 @@ func (api *APIServer) handleDatabaseFile(w http.ResponseWriter, r *http.Request)
 		api.writeErrorResponse(w, http.StatusBadRequest, "Database type not specified")
 		return
 	}
-	
+
 	switch r.Method {
 	case http.MethodGet:
 		api.handleDownloadDatabase(w, r, dbType)
@@ -216,20 +216,20 @@ func (api *APIServer) handleDownloadDatabase(w http.ResponseWriter, r *http.Requ
 		api.writeErrorResponse(w, http.StatusForbidden, "Only primary node can serve database files")
 		return
 	}
-	
+
 	// 构造数据库文件路径
 	dbPath := api.getDatabasePath(dbType)
 	if dbPath == "" {
 		api.writeErrorResponse(w, http.StatusNotFound, "Database type not found")
 		return
 	}
-	
+
 	// 检查文件是否存在
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		api.writeErrorResponse(w, http.StatusNotFound, "Database file not found")
 		return
 	}
-	
+
 	// 打开文件
 	file, err := os.Open(dbPath)
 	if err != nil {
@@ -237,24 +237,24 @@ func (api *APIServer) handleDownloadDatabase(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	defer file.Close()
-	
+
 	// 获取文件信息
 	fileInfo, err := file.Stat()
 	if err != nil {
 		api.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to get file info: %v", err))
 		return
 	}
-	
+
 	// 设置响应头
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.db", dbType))
 	w.Header().Set("Content-Length", strconv.FormatInt(fileInfo.Size(), 10))
-	
+
 	// 复制文件内容到响应
 	if _, err := io.Copy(w, file); err != nil {
 		log.Errorf("Failed to send database file %s: %v", dbType, err)
 	}
-	
+
 	log.Infof("Database file %s sent to client", dbType)
 }
 
@@ -265,14 +265,14 @@ func (api *APIServer) handleUploadDatabase(w http.ResponseWriter, r *http.Reques
 		api.writeErrorResponse(w, http.StatusForbidden, "Only secondary node can receive database files")
 		return
 	}
-	
+
 	// 构造数据库文件路径
 	dbPath := api.getDatabasePath(dbType)
 	if dbPath == "" {
 		api.writeErrorResponse(w, http.StatusNotFound, "Database type not found")
 		return
 	}
-	
+
 	// 创建临时文件
 	tempPath := dbPath + ".tmp"
 	tempFile, err := os.Create(tempPath)
@@ -281,28 +281,28 @@ func (api *APIServer) handleUploadDatabase(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	defer tempFile.Close()
-	
+
 	// 复制上传的内容到临时文件
 	if _, err := io.Copy(tempFile, r.Body); err != nil {
 		api.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write temp file: %v", err))
 		os.Remove(tempPath)
 		return
 	}
-	
+
 	// 关闭临时文件
 	tempFile.Close()
-	
+
 	// 原子性地替换原文件
 	if err := os.Rename(tempPath, dbPath); err != nil {
 		api.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to replace database file: %v", err))
 		os.Remove(tempPath)
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"message": fmt.Sprintf("Database %s uploaded successfully", dbType),
 	}
-	
+
 	api.writeJSONResponse(w, http.StatusOK, response)
 	log.Infof("Database file %s received from client", dbType)
 }
@@ -313,16 +313,16 @@ func (api *APIServer) handleSyncNow(w http.ResponseWriter, r *http.Request) {
 		api.writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	
+
 	if err := api.haManager.SyncNow(); err != nil {
 		api.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"message": "Sync initiated",
 	}
-	
+
 	api.writeJSONResponse(w, http.StatusOK, response)
 }
 
@@ -332,7 +332,7 @@ func (api *APIServer) handleSyncHistory(w http.ResponseWriter, r *http.Request) 
 		api.writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	
+
 	// 获取limit参数
 	limitStr := r.URL.Query().Get("limit")
 	limit := 10 // 默认限制
@@ -341,18 +341,18 @@ func (api *APIServer) handleSyncHistory(w http.ResponseWriter, r *http.Request) 
 			limit = parsedLimit
 		}
 	}
-	
+
 	history, err := api.haManager.GetSyncHistory(limit)
 	if err != nil {
 		api.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"history": history,
 		"count":   len(history),
 	}
-	
+
 	api.writeJSONResponse(w, http.StatusOK, response)
 }
 
@@ -362,17 +362,17 @@ func (api *APIServer) handleEventCount(w http.ResponseWriter, r *http.Request) {
 		api.writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	
+
 	count, err := api.haManager.GetEventCount()
 	if err != nil {
 		api.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"event_count": count,
 	}
-	
+
 	api.writeJSONResponse(w, http.StatusOK, response)
 }
 
@@ -382,12 +382,12 @@ func (api *APIServer) handleUnappliedEvents(w http.ResponseWriter, r *http.Reque
 		api.writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	
-	if api.haManager.eventStore == nil {
+
+	if api.haManager.EventStore == nil {
 		api.writeErrorResponse(w, http.StatusServiceUnavailable, "Event store is not enabled")
 		return
 	}
-	
+
 	// 获取limit参数
 	limitStr := r.URL.Query().Get("limit")
 	limit := 100 // 默认限制
@@ -396,18 +396,18 @@ func (api *APIServer) handleUnappliedEvents(w http.ResponseWriter, r *http.Reque
 			limit = parsedLimit
 		}
 	}
-	
-	events, err := api.haManager.eventStore.GetUnappliedEvents(limit)
+
+	events, err := api.haManager.EventStore.GetUnappliedEvents(limit)
 	if err != nil {
 		api.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"events": events,
 		"count":  len(events),
 	}
-	
+
 	api.writeJSONResponse(w, http.StatusOK, response)
 }
 
@@ -433,7 +433,7 @@ func (api *APIServer) getDatabasePath(dbType string) string {
 func (api *APIServer) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	
+
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		log.Errorf("Failed to encode JSON response: %v", err)
 	}
@@ -445,6 +445,59 @@ func (api *APIServer) writeErrorResponse(w http.ResponseWriter, statusCode int, 
 		"error":     message,
 		"timestamp": time.Now(),
 	}
-	
+
 	api.writeJSONResponse(w, statusCode, errorResponse)
+}
+
+// 在现有的API端点基础上添加以下端点
+
+// handleSendEvents 处理发送事件请求
+func (s *APIServer) handleSendEvents(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var events []*DatabaseEvent
+	if err := json.NewDecoder(r.Body).Decode(&events); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// 应用接收到的事件
+	successCount := 0
+	for _, event := range events {
+		if err := s.haManager.applyEvent(event); err != nil {
+			log.Errorf("Failed to apply received event %s: %v", event.EventID, err)
+			continue
+		}
+		successCount++
+	}
+
+	response := map[string]interface{}{
+		"success": true,
+		"applied_count": successCount,
+		"total_count": len(events),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// handleRequestEvents 处理请求事件
+func (s *APIServer) handleRequestEvents(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// 获取未应用的事件
+	events, err := s.haManager.EventStore.GetUnappliedEvents(0)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get events: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(events)
 }
